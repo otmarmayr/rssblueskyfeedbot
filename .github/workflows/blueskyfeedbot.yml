@@ -30,7 +30,8 @@ jobs:
       - name: GitHub
         uses: joschi/blueskyfeedbot@v1
         with:
-          rss-feed: https://verwandten.info/feed/
+          rss-feed: https://www.verwandten.info/persoenlichkeiten?format=feed&type=rss
+/
           template: |
             {{item.title}}
             {{item.link}}
