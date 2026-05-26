@@ -33,7 +33,8 @@ jobs:
           rss-feed: https://www.verwandten.info/persoenlichkeiten?format=feed&type=rss
           template: |
             {{item.title}}
-            {{item.link}}
+            Mehr Infos:
+            ➡️ https://www.verwandten.info/persoenlichkeiten
           service-url: https://bsky.social
           username: ${{ secrets.BLUESKY_USERNAME }}
           password: ${{ secrets.BLUESKY_PASSWORD }}
