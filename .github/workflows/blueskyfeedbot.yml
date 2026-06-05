@@ -23,7 +23,7 @@ jobs:
 
       - name: Run feed bot
         env:
-          FEED_URL: ${{ secrets.FEED_URL }}
+          FEED_URLS: ${{ secrets.FEED_URLS }}
           BSKY_HANDLE: ${{ secrets.BSKY_HANDLE }}
           BSKY_PASSWORD: ${{ secrets.BSKY_PASSWORD }}
         run: node index.js
