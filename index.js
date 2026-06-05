@@ -22,11 +22,9 @@ const parser = new Parser({
 });
 
 async function extractImage(item) {
-  // 1. media:content
   if (item.enclosure?.url) return item.enclosure.url;
   if (item["media:content"]?.url) return item["media:content"].url;
 
-  // 2. Try to extract <img> from content
   if (item.content) {
     const match = item.content.match(/<img[^>]+src="([^">]+)"/i);
     if (match) return match[1];
@@ -92,11 +90,20 @@ async function run() {
       if (!feed.items.length) continue;
 
       const latest = feed.items[0];
+
+      let link;
+
+      if (url.includes("persoenlichkeiten")) {
+        link = "https://www.verwandten.info/persoenlichkeiten";
+      } else {
+        link = latest.link;
+      }
+
       const imageUrl = await extractImage(latest);
 
       console.log("Posting:", latest.title, imageUrl ? "(with image)" : "(no image)");
 
-      await postToBluesky(agent, latest.title, latest.link, imageUrl);
+      await postToBluesky(agent, latest.title, link, imageUrl);
 
     } catch (err) {
       console.error("Error with feed:", url, err);
