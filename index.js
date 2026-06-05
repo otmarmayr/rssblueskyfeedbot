@@ -2,6 +2,7 @@ import Parser from "rss-parser";
 import pkg from "@atproto/api";
 const { BskyAgent } = pkg;
 import fetch from "node-fetch";
+import fs from "fs";
 
 const FEED_URLS = process.env.FEED_URLS;
 const BSKY_HANDLE = process.env.BSKY_HANDLE;
@@ -10,6 +11,14 @@ const BSKY_PASSWORD = process.env.BSKY_PASSWORD;
 if (!FEED_URLS || !BSKY_HANDLE || !BSKY_PASSWORD) {
   console.error("Missing environment variables");
   process.exit(1);
+}
+
+const STATE_FILE = ".lastpost.json";
+
+// Load last posted timestamps
+let state = {};
+if (fs.existsSync(STATE_FILE)) {
+  state = JSON.parse(fs.readFileSync(STATE_FILE, "utf8"));
 }
 
 const parser = new Parser({
@@ -91,8 +100,24 @@ async function run() {
 
       const latest = feed.items[0];
 
-      let link;
+      // Parse publication date
+      const pubDate = new Date(latest.pubDate).getTime();
+      if (!pubDate) {
+        console.log("No pubDate found, skipping:", latest.title);
+        continue;
+      }
 
+      // Load last posted date for this feed
+      const lastPosted = state[url] ? Number(state[url]) : 0;
+
+      // Skip if not newer
+      if (pubDate <= lastPosted) {
+        console.log("Already posted (based on date), skipping:", latest.title);
+        continue;
+      }
+
+      // Determine link
+      let link;
       if (url.includes("persoenlichkeiten")) {
         link = "https://www.verwandten.info/persoenlichkeiten";
       } else {
@@ -101,14 +126,20 @@ async function run() {
 
       const imageUrl = await extractImage(latest);
 
-      console.log("Posting:", latest.title, imageUrl ? "(with image)" : "(no image)");
+      console.log("Posting NEW article:", latest.title);
 
       await postToBluesky(agent, latest.title, link, imageUrl);
+
+      // Save new timestamp
+      state[url] = pubDate;
 
     } catch (err) {
       console.error("Error with feed:", url, err);
     }
   }
+
+  // Save state file
+  fs.writeFileSync(STATE_FILE, JSON.stringify(state, null, 2));
 }
 
 run().catch(err => {
