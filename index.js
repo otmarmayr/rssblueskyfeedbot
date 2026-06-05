@@ -1,5 +1,6 @@
 import Parser from "rss-parser";
-import { BskyAgent } from "@atproto/api";
+import pkg from "@atproto/api";
+const { BskyAgent } = pkg;
 
 const FEED_URL = process.env.FEED_URL;
 const BSKY_HANDLE = process.env.BSKY_HANDLE;
