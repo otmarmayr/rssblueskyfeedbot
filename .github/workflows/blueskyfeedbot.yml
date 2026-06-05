@@ -9,28 +9,32 @@ jobs:
   run:
     runs-on: ubuntu-latest
 
-    env:
-      FORCE_JAVASCRIPT_ACTIONS_TO_NODE24: true
+    permissions:
+      contents: write   # erlaubt das Committen der package-lock.json
 
     steps:
       - name: Checkout repository
         uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
 
       - name: Set up Node.js
         uses: actions/setup-node@v4
         with:
           node-version: 20
-          cache: "npm"
 
-      - name: Install dependencies
+      - name: Install dependencies and generate lockfile
         run: npm install
+
+      - name: Commit package-lock.json if missing
+        run: |
+          if [ -f package-lock.json ]; then
+            git config user.name "github-actions"
+            git config user.email "github-actions@github.com"
+            git add package-lock.json
+            git commit -m "Add package-lock.json" || echo "No changes to commit"
+            git push
+          fi
 
       - name: Run feed bot
         run: node index.js
-
-      - name: Cache Bluesky state
-        uses: actions/cache@v4
-        with:
-          path: .cache
-          key: bluesky-cache-${{ github.run_id }}
-          restore-keys: bluesky-cache-
