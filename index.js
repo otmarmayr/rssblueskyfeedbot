@@ -1,6 +1,6 @@
 import Parser from "rss-parser";
 import pkg from "@atproto/api";
-const { BskyAgent } = pkg;
+const { BskyAgent, RichText } = pkg;
 import fetch from "node-fetch";
 import fs from "fs";
 
@@ -61,28 +61,32 @@ async function uploadImage(agent, url) {
 async function postToBluesky(agent, title, link, imageUrl) {
   const text = `${title}\n${link}`;
 
-  if (!imageUrl) {
-    return agent.post({ text });
-  }
+  // Facet erzeugen (macht den Link klickbar)
+  const rt = new RichText({ text });
+  await rt.detectFacets();
 
-  const blob = await uploadImage(agent, imageUrl);
+  const post = {
+    text: rt.text,
+    facets: rt.facets
+  };
 
-  if (!blob) {
-    return agent.post({ text });
-  }
-
-  return agent.post({
-    text,
-    embed: {
-      $type: "app.bsky.embed.images",
-      images: [
-        {
-          image: blob,
-          alt: title
-        }
-      ]
+  // Bild anhängen, falls vorhanden
+  if (imageUrl) {
+    const blob = await uploadImage(agent, imageUrl);
+    if (blob) {
+      post.embed = {
+        $type: "app.bsky.embed.images",
+        images: [
+          {
+            image: blob,
+            alt: title
+          }
+        ]
+      };
     }
-  });
+  }
+
+  return agent.post(post);
 }
 
 async function run() {
@@ -118,9 +122,12 @@ async function run() {
 
       // Determine link
       let link;
+
       if (url.includes("persoenlichkeiten")) {
+        // Variante C: Nur URL als Link
         link = "https://www.verwandten.info/persoenlichkeiten";
       } else {
+        // Blog: Artikel-URL aus dem Feed
         link = latest.link;
       }
 
