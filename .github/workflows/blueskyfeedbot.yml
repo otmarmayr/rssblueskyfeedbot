@@ -1,42 +1,36 @@
-name: FeedBot
+name: Bluesky Feed Bot
 
 on:
   schedule:
-    - cron: '*/5 * * * *'
+    - cron: "*/30 * * * *"
   workflow_dispatch:
 
-concurrency:
-  group: feedbot
-
 jobs:
-  rss-to-bluesky:
+  run:
     runs-on: ubuntu-latest
 
+    env:
+      FORCE_JAVASCRIPT_ACTIONS_TO_NODE24: true
+
     steps:
-      - name: Generate cache key
-        uses: actions/github-script@v6
-        id: generate-key
-        with:
-          script: |
-            core.setOutput('cache-key', new Date().valueOf())
+      - name: Checkout repository
+        uses: actions/checkout@v4
 
-      - name: Retrieve cache
-        uses: actions/cache@v3
+      - name: Set up Node.js
+        uses: actions/setup-node@v4
         with:
-          path: ${{ github.workspace }}/blueskyfeedbot
-          key: feed-cache-${{ steps.generate-key.outputs.cache-key }}
-          restore-keys: feed-cache-
+          node-version: 20
+          cache: "npm"
 
-      - name: GitHub
-        uses: joschi/blueskyfeedbot@v1
+      - name: Install dependencies
+        run: npm ci
+
+      - name: Run feed bot
+        run: node index.js
+
+      - name: Cache Bluesky state
+        uses: actions/cache@v4
         with:
-          rss-feed: https://www.verwandten.info/persoenlichkeiten?format=feed&type=rss
-          template: |
-            {{item.title}}
-            Mehr Infos:
-            ➡️ https://www.verwandten.info/persoenlichkeiten
-          service-url: https://bsky.social
-          username: ${{ secrets.BLUESKY_USERNAME }}
-          password: ${{ secrets.BLUESKY_PASSWORD }}
-          cache-file: ${{ github.workspace }}/blueskyfeedbot/cache.json
-          initial-post-limit: 10
+          path: .cache
+          key: bluesky-cache-${{ github.run_id }}
+          restore-keys: bluesky-cache-
