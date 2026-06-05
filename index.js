@@ -13,12 +13,12 @@ if (!FEED_URL || !BSKY_HANDLE || !BSKY_PASSWORD) {
 
 async function fetchFeed(url) {
   const parser = new Parser({
-    requestOptions: {
-      headers: {
-        "User-Agent": "Mozilla/5.0"
-      }
+  requestOptions: {
+    headers: {
+      "User-Agent": "Mozilla/5.0 (GitHub Actions Bot)"
     }
-  });
+  }
+});
 
   return parser.parseURL(url);
 }
