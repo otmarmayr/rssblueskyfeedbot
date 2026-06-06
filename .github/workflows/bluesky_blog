@@ -1,0 +1,39 @@
+name: Bluesky Blog Bot
+
+on:
+  schedule:
+    - cron: "*/10 * * * *"   # alle 10 Minuten
+  workflow_dispatch:
+
+jobs:
+  run-bot:
+    runs-on: ubuntu-latest
+
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Restore state
+        uses: actions/cache@v4
+        with:
+          path: .lastpost_blog.json
+          key: state-blog
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 20
+
+      - run: npm install
+
+      - name: Run Bot
+        env:
+          FEED_URLS: ${{ secrets.FEED_URLS_BLOG }}
+          BSKY_HANDLE: ${{ secrets.BSKY_HANDLE }}
+          BSKY_PASSWORD: ${{ secrets.BSKY_PASSWORD }}
+          STATE_FILE: ".lastpost_blog.json"
+        run: node index.js
+
+      - name: Save state
+        uses: actions/cache@v4
+        with:
+          path: .lastpost_blog.json
+          key: state-blog
