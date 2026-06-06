@@ -1,4 +1,4 @@
-name: Bluesky Blog Bot
+name: Bluesky Blog Bot – prüft alle 10 Minuten auf neue Einträg
 
 on:
   schedule:
