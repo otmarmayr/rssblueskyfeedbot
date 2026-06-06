@@ -2,28 +2,42 @@ name: Bluesky Feed Bot
 
 on:
   schedule:
-    - cron: "*/30 * * * *"
+    - cron: "0 */6 * * *"   # alle 6 Stunden
   workflow_dispatch:
 
 jobs:
-  run:
+  run-bot:
     runs-on: ubuntu-latest
 
     steps:
       - name: Checkout repository
         uses: actions/checkout@v4
 
-      - name: Set up Node.js
+      # Persistenter Cache für .lastpost.json
+      - name: Restore state file
+        uses: actions/cache@v4
+        with:
+          path: .lastpost.json
+          key: rssblueskybot-state
+
+      - name: Setup Node.js
         uses: actions/setup-node@v4
         with:
-          node-version: 24
+          node-version: 20
 
       - name: Install dependencies
         run: npm install
 
-      - name: Run feed bot
+      - name: Run Bluesky Feed Bot
         env:
           FEED_URLS: ${{ secrets.FEED_URLS }}
           BSKY_HANDLE: ${{ secrets.BSKY_HANDLE }}
           BSKY_PASSWORD: ${{ secrets.BSKY_PASSWORD }}
         run: node index.js
+
+      # Cache erneut speichern (falls Datei geändert wurde)
+      - name: Save state file
+        uses: actions/cache@v4
+        with:
+          path: .lastpost.json
+          key: rssblueskybot-state
