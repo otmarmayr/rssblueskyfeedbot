@@ -7,15 +7,14 @@ import fs from "fs";
 const FEED_URLS = process.env.FEED_URLS;
 const BSKY_HANDLE = process.env.BSKY_HANDLE;
 const BSKY_PASSWORD = process.env.BSKY_PASSWORD;
+const STATE_FILE = process.env.STATE_FILE || ".lastpost.json";
 
 if (!FEED_URLS || !BSKY_HANDLE || !BSKY_PASSWORD) {
   console.error("Missing environment variables");
   process.exit(1);
 }
 
-const STATE_FILE = ".lastpost.json";
-
-// Load last posted timestamps
+// Load state
 let state = {};
 if (fs.existsSync(STATE_FILE)) {
   state = JSON.parse(fs.readFileSync(STATE_FILE, "utf8"));
@@ -47,8 +46,10 @@ async function uploadImage(agent, url) {
     const res = await fetch(url);
     const buffer = Buffer.from(await res.arrayBuffer());
 
+    const contentType = res.headers.get("content-type") || "image/jpeg";
+
     const blob = await agent.uploadBlob(buffer, {
-      encoding: "image/jpeg"
+      encoding: contentType
     });
 
     return blob.data.blob;
@@ -61,16 +62,15 @@ async function uploadImage(agent, url) {
 async function postToBluesky(agent, title, link, imageUrl) {
   const text = `${title}\n${link}`;
 
-  // Facet erzeugen (macht den Link klickbar)
   const rt = new RichText({ text });
   await rt.detectFacets();
 
   const post = {
+    $type: "app.bsky.feed.post",
     text: rt.text,
     facets: rt.facets
   };
 
-  // Bild anhängen, falls vorhanden
   if (imageUrl) {
     const blob = await uploadImage(agent, imageUrl);
     if (blob) {
@@ -89,6 +89,15 @@ async function postToBluesky(agent, title, link, imageUrl) {
   return agent.post(post);
 }
 
+function getPubDate(item) {
+  return (
+    new Date(item.pubDate).getTime() ||
+    new Date(item.isoDate).getTime() ||
+    new Date(item.updated).getTime() ||
+    0
+  );
+}
+
 async function run() {
   const feeds = FEED_URLS.split("\n").map(f => f.trim()).filter(Boolean);
 
@@ -103,41 +112,33 @@ async function run() {
       if (!feed.items.length) continue;
 
       const latest = feed.items[0];
+      const pubDate = getPubDate(latest);
 
-      // Parse publication date
-      const pubDate = new Date(latest.pubDate).getTime();
       if (!pubDate) {
-        console.log("No pubDate found, skipping:", latest.title);
+        console.log("No valid date, skipping:", latest.title);
         continue;
       }
 
-      // Load last posted date for this feed
       const lastPosted = state[url] ? Number(state[url]) : 0;
 
-      // Skip if not newer
       if (pubDate <= lastPosted) {
-        console.log("Already posted (based on date), skipping:", latest.title);
+        console.log("Already posted, skipping:", latest.title);
         continue;
       }
 
-      // Determine link
       let link;
 
       if (url.includes("persoenlichkeiten")) {
-        // Variante C: Nur URL als Link
         link = "https://www.verwandten.info/persoenlichkeiten";
       } else {
-        // Blog: Artikel-URL aus dem Feed
         link = latest.link;
       }
 
       const imageUrl = await extractImage(latest);
 
       console.log("Posting NEW article:", latest.title);
-
       await postToBluesky(agent, latest.title, link, imageUrl);
 
-      // Save new timestamp
       state[url] = pubDate;
 
     } catch (err) {
@@ -145,7 +146,6 @@ async function run() {
     }
   }
 
-  // Save state file
   fs.writeFileSync(STATE_FILE, JSON.stringify(state, null, 2));
 }
 
