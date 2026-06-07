@@ -4,9 +4,9 @@ on:
   schedule:
     - cron: "*/10 * * * *"
   workflow_dispatch:
-  
+
 permissions:
-contents: write
+  contents: write
 
 jobs:
   run-bot:
