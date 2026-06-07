@@ -16,7 +16,9 @@ jobs:
         uses: actions/cache@v4
         with:
           path: .lastpost_blog.json
-          key: state-blog
+          key: state-blog-${{ github.run_id }}
+          restore-keys: |
+            state-blog-
 
       - uses: actions/setup-node@v4
         with:
@@ -32,8 +34,9 @@ jobs:
           STATE_FILE: ".lastpost_blog.json"
         run: node index.js
 
-      - name: Save state
-        uses: actions/cache@v4
-        with:
-          path: .lastpost_blog.json
-          key: state-blog
+     - name: Save state
+       uses: actions/cache@v4
+       with:
+         path: .lastpost_blog.json
+         key: state-blog-${{ github.run_id }}
+
