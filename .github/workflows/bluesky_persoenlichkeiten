@@ -1,8 +1,8 @@
-name: Bluesky Persönlichkeiten Bot
+name: Bluesky Persönlichkeiten Bot – prüft alle 10 Minuten auf neue Einträge
 
 on:
   schedule:
-    - cron: "*/10 * * * *"   # alle 10 Minuten
+    - cron: "*/10 * * * *"
   workflow_dispatch:
 
 jobs:
@@ -11,14 +11,8 @@ jobs:
 
     steps:
       - uses: actions/checkout@v4
-
-      - name: Restore state
-  uses: actions/cache@v4
-  with:
-    path: .lastpost_pers.json
-    key: state-pers-${{ github.run_id }}
-    restore-keys: |
-      state-pers-
+        with:
+          token: ${{ secrets.GITHUB_TOKEN }}
 
       - uses: actions/setup-node@v4
         with:
@@ -34,9 +28,10 @@ jobs:
           STATE_FILE: ".lastpost_pers.json"
         run: node index.js
 
-      - name: Save state
-        uses: actions/cache@v4
-        with:
-        path: .lastpost_pers.json
-        key: state-pers-${{ github.run_id }}
-
+      - name: Commit updated state
+        run: |
+          git config user.name "GitHub Actions"
+          git config user.email "actions@github.com"
+          git add .lastpost_pers.json
+          git commit -m "Update pers state" || echo "No changes to commit"
+          git push
